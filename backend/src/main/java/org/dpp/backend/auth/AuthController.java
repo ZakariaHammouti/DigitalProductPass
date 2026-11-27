@@ -12,10 +12,7 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -51,14 +48,18 @@ public class AuthController {
         SecurityContextHolder.setContext(context);
         securityContextRepository.saveContext(context, httpServletRequest, httpServletResponse);
 
-        AppUser appUser = userRepository.findByUsername(authentication.getName())
-                .orElseThrow(() -> new RuntimeException("Benutzer nicht gefunden: " + authentication.getName()));
+        return toCurrentUser(authentication.getName());
+    }
 
-        CurrentUserResponseDto currentUserResponseDto = new CurrentUserResponseDto(
-                appUser.username(),
-                appUser.role()
-        );
+    //Spring übergibt automatisch das Authentication-Objekt des aktuell angemeldeten Benutzers
+    @GetMapping("/me")
+    public CurrentUserResponseDto getCurrentUser(Authentication authentication) {
+        return toCurrentUser(authentication.getName());
+    }
 
-        return currentUserResponseDto;
+    private CurrentUserResponseDto toCurrentUser(String username) {
+        AppUser appUser = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("Benutzer nicht gefunden: " + username));
+        return new CurrentUserResponseDto(appUser.username(), appUser.role());
     }
 }

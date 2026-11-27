@@ -214,4 +214,45 @@ class AuthControllerTest {
 
         assertThat(session.isInvalid()).isTrue();
     }
+
+    private MockHttpSession loginAsAdmin() throws Exception {
+        AppUser admin = AppUser.builder()
+                .id("1")
+                .username("admin")
+                .password(passwordEncoder.encode("geheim123"))
+                .role(Role.ADMIN)
+                .accountStatus(AccountStatus.ACTIVE)
+                .build();
+        when(userRepository.findByUsername("admin")).thenReturn(Optional.of(admin));
+
+        MvcResult result = mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username": "admin", "password": "geheim123"}
+                                """))
+                .andExpect(status().isOk())
+                .andReturn();
+        return (MockHttpSession) result.getRequest().getSession();
+    }
+
+    @Test
+    void me_returnsCurrentUser_whenLoggedIn() throws Exception {
+        MockHttpSession session = loginAsAdmin();
+
+        mockMvc.perform(get("/api/auth/me").session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username").value("admin"))
+                .andExpect(jsonPath("$.role").value("ADMIN"));
+    }
+
+    @Test
+    void me_returns401_afterLogout() throws Exception {
+        MockHttpSession session = loginAsAdmin();
+
+        mockMvc.perform(post("/api/auth/logout").session(session))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/auth/me").session(session))
+                .andExpect(status().isUnauthorized());
+    }
 }
