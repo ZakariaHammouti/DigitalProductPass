@@ -36,11 +36,12 @@ public class AdminInitializer implements ApplicationRunner {
 
         if (!adminExists) {
             if (adminUsername.isBlank() || adminPassword.isBlank()) {
-                log.warn("Admin-Benutzername oder Passwort ist nicht gesetzt. Bitte setzen Sie die Umgebungsvariablen ADMIN_USERNAME und ADMIN_PASSWORD.");
+                log.warn("Admin-Benutzername oder Passwort ist nicht gesetzt." +
+                        " Bitte setzen Sie die Umgebungsvariablen ADMIN_USERNAME und ADMIN_PASSWORD.");
                 return;
             }
-            
-            User adminUser = User.builder()
+
+            AppUser adminAppUser = AppUser.builder()
                     .id(UUID.randomUUID().toString())
                     .username(adminUsername)
                     .password(passwordEncoder.encode(adminPassword))
@@ -48,7 +49,7 @@ public class AdminInitializer implements ApplicationRunner {
                     .accountStatus(AccountStatus.ACTIVE)
                     .build();
 
-            userRepository.save(adminUser);
+            userRepository.save(adminAppUser);
             log.info("Admin-Benutzer erstellt: {}", adminUsername);
         } else {
             log.info("Admin-Benutzer existiert bereits.");
