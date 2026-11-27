@@ -78,4 +78,25 @@ class AppUserDetailsServiceTest {
                 .extracting(GrantedAuthority::getAuthority)
                 .containsExactly("ROLE_" + role.name());
     }
+
+    @ParameterizedTest
+    @EnumSource(AccountStatus.class)
+        // Account Status     isEnabled  isAccountNonLocked
+        //ACTIVE	            true	    true
+        //PENDING	            false	    true
+        //REJECTED	            true	    false
+        //LOCKED	            true	    false
+    void loadUserByUsername_mapsAccountStatus(AccountStatus status) {
+        AppUser appUser = AppUser.builder()
+                .id("1").username("user").password("hash123")
+                .role(Role.MANUFACTURER).accountStatus(status)
+                .build();
+        when(userRepository.findByUsername("user")).thenReturn(Optional.of(appUser));
+
+        UserDetails userDetails = service.loadUserByUsername("user");
+
+        assertThat(userDetails.isEnabled()).isEqualTo(status != AccountStatus.PENDING);
+        assertThat(userDetails.isAccountNonLocked())
+                .isEqualTo(status != AccountStatus.REJECTED && status != AccountStatus.LOCKED);
+    }
 }

@@ -6,6 +6,8 @@ import org.dpp.backend.user.AppUser;
 import org.dpp.backend.user.Role;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -30,6 +32,7 @@ import static org.mockito.Mockito.clearInvocations;
 
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.ResultActions;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -254,5 +257,47 @@ class AuthControllerTest {
 
         mockMvc.perform(get("/api/auth/me").session(session))
                 .andExpect(status().isUnauthorized());
+    }
+
+    private void givenUser(AccountStatus status) {
+        AppUser user = AppUser.builder()
+                .id("2").username("hersteller")
+                .password(passwordEncoder.encode("geheim123"))
+                .role(Role.MANUFACTURER).accountStatus(status)
+                .build();
+        when(userRepository.findByUsername("hersteller")).thenReturn(Optional.of(user));
+    }
+
+    private ResultActions login(String password) throws Exception {
+        return mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"username": "hersteller", "password": "%s"}
+                        """.formatted(password)));
+    }
+
+    @Test
+    void login_returnsPendingMessage_whenAccountPendingAndPasswordCorrect() throws Exception {
+        givenUser(AccountStatus.PENDING);
+        login("geheim123")
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.detail").value("Dein Konto wartet noch auf Freigabe"));
+    }
+
+    @Test
+    void login_returnsGeneralMessage_whenAccountPendingAndPasswordWrong() throws Exception {
+        givenUser(AccountStatus.PENDING);
+        login("falsch")
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.detail").value("Benutzername oder Passwort falsch"));
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = AccountStatus.class, names = {"REJECTED", "LOCKED"})
+    void login_returnsLockedMessage_whenAccountRejectedOrLocked(AccountStatus status) throws Exception {
+        givenUser(status);
+        login("geheim123")
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.detail").value("Dein Konto ist gesperrt oder wurde abgelehnt"));
     }
 }

@@ -1,12 +1,7 @@
-import './App.css'
+import LoginPage from './LoginPage'
 
 function App() {
-
-    return (
-        <>
-            <h1>Welcome to DPP</h1>
-        </>
-    )
+    return <LoginPage/>
 }
 
 export default App

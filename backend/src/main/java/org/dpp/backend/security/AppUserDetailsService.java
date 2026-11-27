@@ -1,6 +1,7 @@
 package org.dpp.backend.security;
 
 import org.dpp.backend.repository.UserRepository;
+import org.dpp.backend.user.AccountStatus;
 import org.dpp.backend.user.AppUser;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -22,10 +23,16 @@ public class AppUserDetailsService implements UserDetailsService {
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         AppUser appUser = getUserByUsername(username);
+
+
         return User.builder()
                 .username(appUser.username())
                 .password(appUser.password())
                 .roles(appUser.role().name())
+                // Setzt die Flags für den Benutzerstatus basierend auf dem AccountStatus
+                .disabled(appUser.accountStatus() == AccountStatus.PENDING)
+                .accountLocked(appUser.accountStatus() == AccountStatus.REJECTED
+                        || appUser.accountStatus() == AccountStatus.LOCKED)
                 .build();
     }
 

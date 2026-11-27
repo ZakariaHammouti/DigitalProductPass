@@ -4,7 +4,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.InternalAuthenticationServiceException;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -34,7 +36,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     // Datenbank weg / unerwarteter Fehler	500 allgemein, lokal mit Details
     // Geschützter Pfad ohne Login	401
     // Logout	200
-    
+
     private final boolean showDetails;
 
     public GlobalExceptionHandler(@Value("${app.errors.show-details:false}") boolean showDetails) {
@@ -99,5 +101,19 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         problem.setProperty("errors", validationErrors);
 
         return ResponseEntity.badRequest().body(problem);
+    }
+
+    @ExceptionHandler(DisabledException.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    public ProblemDetail handleDisabled(DisabledException e) {
+        //beim anlegen eines neuen Benutzers ist der AccountStatus auf PENDING gesetzt,
+        return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, "Dein Konto wartet noch auf Freigabe");
+    }
+
+    @ExceptionHandler(LockedException.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    public ProblemDetail handleLocked(LockedException e) {
+        //Beim Sperren eines Benutzers ist der AccountStatus auf REJECTED oder LOCKED gesetzt
+        return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, "Dein Konto ist gesperrt oder wurde abgelehnt");
     }
 }
