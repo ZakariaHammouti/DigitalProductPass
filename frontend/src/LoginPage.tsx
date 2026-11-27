@@ -24,7 +24,6 @@ export default function LoginPage() {
             body: JSON.stringify({username, password}),
         })
 
-
         if (response.ok) {
             setUser(await response.json())
         } else {

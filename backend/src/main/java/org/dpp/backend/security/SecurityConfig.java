@@ -41,6 +41,8 @@ public class SecurityConfig {
     /**
      * Stellt den AuthenticationManager bereit, den der AuthController beim Login aufruft.
      * --
+     * Diese Methode läuft nur EINMAL beim App-Start und baut den Manager. Die Prüfungen laufen erst bei jedem Login.
+     * --
      * Ablauf bei authenticate(...) (Reihenfolge ist in Spring fest vorgegeben):
      * 1. Benutzer laden (AppUserDetailsService)
      * 2. PRE-Prüfung
@@ -51,19 +53,21 @@ public class SecurityConfig {
      * also VOR dem Passwort. Dann bekäme auch jemand mit falschem Passwort z. B. "wartet auf Freigabe"
      * und wüsste, dass der Benutzername existiert.
      * Deshalb: PRE-Prüfung leer, Statusprüfung erst in der POST-Prüfung, also NACH dem Passwort (AK 2).
+     * Die Reihenfolge selbst gibt Spring vor; hier wird nur festgelegt, WAS in PRE und WAS in POST geprüft wird.
      */
     @Bean
     public AuthenticationManager authenticationManager(AppUserDetailsService userDetailsService,
                                                        PasswordEncoder passwordEncoder) {
-        // Lädt Benutzer über Service und vergleicht Passwörter mit BCrypt
+        // Provider bekommt die Werkzeuge: den Service zum Laden der Benutzer und BCrypt zum Passwortvergleich
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
         provider.setPasswordEncoder(passwordEncoder);
 
-        // Vor dem Passwortvergleich: nichts prüfen
+        // PRE: legt fest, was VOR dem Passwortvergleich geprüft wird. Hier: nichts.
         provider.setPreAuthenticationChecks(user -> {
         });
 
-        // Nach richtigem Passwort: Status prüfen (deaktiviert → DisabledException, gesperrt → LockedException)
+        // POST: legt fest, was NACH richtigem Passwort geprüft wird. Hier: der Kontostatus
+        // (deaktiviert → DisabledException, gesperrt → LockedException; Werte kommen aus den Flags im AppUserDetailsService)
         provider.setPostAuthenticationChecks(new AccountStatusUserDetailsChecker());
 
         // ProviderManager ist Springs Standard-Implementierung des AuthenticationManager

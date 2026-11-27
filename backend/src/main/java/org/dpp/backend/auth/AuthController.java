@@ -21,6 +21,8 @@ public class AuthController {
     private final AuthenticationManager authenticationManager;
     private final UserRepository userRepository;
 
+    // Speichert den SecurityContext in der HTTP-Session, damit der Login über diese Anfrage hinaus gilt.
+    // Selbst mit new erzeugt, weil Spring dafür keine fertige Bean bereitstellt.
     private final SecurityContextRepository securityContextRepository =
             new HttpSessionSecurityContextRepository();
 
@@ -41,11 +43,23 @@ public class AuthController {
                 loginRequestDto.username(),
                 loginRequestDto.password()
         );
-        Authentication authentication = authenticationManager.authenticate(authToken);
+        // Bei jedem Login, ausgelöst von authenticate(...):
+        // 1. User holen: Dein Service fragt MongoDB. --> AppUserDetailsService.loadUserByUsername(username)
+        // 2. PRE: nichts prüfen
+        // 3. Passwort vergleichen: mit BCrypt --> Spring prüft hier, ob das Passwort stimmt. Wenn nicht, wird eine Exception geworfen.
+        // 4. POST: Status prüfen, er muss ACTIVE sein --> Spring prüft hier, ob der AccountStatus ACTIVE ist. Wenn nicht, wird eine Exception geworfen.
+        // 5. Fertig: geprüfter Token mit Name und Rolle zurück an den Controller --> Spring liefert den geprüften Token zurück, der Name und Rolle enthält. Der Controller kann jetzt den Benutzer als angemeldet betrachten.
+        // Geht ein Schritt schief, ist sofort Schluss mit einer Exception.
+        Authentication authentication = authenticationManager.authenticate(authToken); //--> Spring prüft hier Benutzername + Passwort + AccountStatus in userRepository.findByUsername(username)
 
+        // Leere Hülle für die Anmeldedaten anlegen
         SecurityContext context = SecurityContextHolder.createEmptyContext();
+        // Geprüften Benutzer (Name + Rolle) hineinlegen
         context.setAuthentication(authentication);
+        // Gilt ab jetzt für diese Anfrage als angemeldet
         SecurityContextHolder.setContext(context);
+        // In der Session speichern; Spring setzt dabei das Cookie JSESSIONID,
+        // damit die nächsten Anfragen den Benutzer wiedererkennen
         securityContextRepository.saveContext(context, httpServletRequest, httpServletResponse);
 
         return toCurrentUser(authentication.getName());

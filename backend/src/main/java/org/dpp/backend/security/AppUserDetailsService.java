@@ -24,7 +24,6 @@ public class AppUserDetailsService implements UserDetailsService {
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         AppUser appUser = getUserByUsername(username);
 
-
         return User.builder()
                 .username(appUser.username())
                 .password(appUser.password())
@@ -40,5 +39,4 @@ public class AppUserDetailsService implements UserDetailsService {
         return userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("Benutzer nicht gefunden: " + username));
     }
-
 }
