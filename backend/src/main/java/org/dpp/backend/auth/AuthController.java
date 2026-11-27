@@ -2,6 +2,7 @@ package org.dpp.backend.auth;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 import org.dpp.backend.repository.UserRepository;
 import org.dpp.backend.user.AppUser;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -32,10 +33,11 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public CurrentUserResponseDto login(@RequestBody LoginRequestDto loginRequestDto,
+    public CurrentUserResponseDto login(@RequestBody
+                                        @Valid
+                                        LoginRequestDto loginRequestDto,
                                         HttpServletRequest httpServletRequest,
                                         HttpServletResponse httpServletResponse) {
-
 
         // Authentifizieren eines nicht geprüften Benutzers mit dem AuthenticationManager
         UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
