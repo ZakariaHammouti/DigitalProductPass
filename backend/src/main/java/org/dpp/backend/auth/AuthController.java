@@ -52,7 +52,7 @@ public class AuthController {
         securityContextRepository.saveContext(context, httpServletRequest, httpServletResponse);
 
         AppUser appUser = userRepository.findByUsername(authentication.getName())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new RuntimeException("Benutzer nicht gefunden: " + authentication.getName()));
 
         CurrentUserResponseDto currentUserResponseDto = new CurrentUserResponseDto(
                 appUser.username(),
