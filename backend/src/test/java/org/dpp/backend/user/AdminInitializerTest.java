@@ -16,6 +16,20 @@ class AdminInitializerTest {
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     @Test
+    void run_doesNotCreateAdmin_whenPasswordIsLongerThan72Bytes() {
+        // given
+        when(userRepository.existsByRole(Role.ADMIN)).thenReturn(false);
+        AdminInitializer initializer =
+                new AdminInitializer(userRepository, passwordEncoder, "admin", "a".repeat(73));
+
+        // when
+        initializer.run(null);
+
+        // then
+        verify(userRepository, never()).save(any(AppUser.class));
+    }
+    
+    @Test
     void run_createsActiveAdminWithHashedPassword_whenNoAdminExists() {
         // given
         when(userRepository.existsByRole(Role.ADMIN)).thenReturn(false);

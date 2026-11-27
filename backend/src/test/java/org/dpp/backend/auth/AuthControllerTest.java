@@ -20,6 +20,7 @@ import java.util.Optional;
 
 import static org.hamcrest.Matchers.notNullValue;
 import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
@@ -48,6 +49,44 @@ class AuthControllerTest {
     @BeforeEach
     void setUp() {
         clearInvocations(userRepository);
+    }
+
+    @Test
+    void login_returns400_whenUsernameIsTooLong() throws Exception {
+        String tooLong = "a".repeat(51);
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username": "%s", "password": "geheim123"}
+                                """.formatted(tooLong)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.username[0]").value("Benutzername darf höchstens 50 Zeichen haben"));
+
+        verify(userRepository, never()).findByUsername(any());
+    }
+
+    @Test
+    void login_returns400_whenPasswordIsTooLong() throws Exception {
+        String tooLong = "a".repeat(73);
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username": "admin", "password": "%s"}
+                                """.formatted(tooLong)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.password[0]").value("Passwort ist zu lang"));
+
+        verify(userRepository, never()).findByUsername(any());
+    }
+
+    @Test
+    void protectedEndpoint_returns401_whenNotLoggedIn() throws Exception {
+        //Test, dass ein geschützter Endpunkt 401 zurückgibt,
+        // wenn der Benutzer nicht angemeldet ist
+        mockMvc.perform(get("/api/auth/me"))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
