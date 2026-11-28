@@ -3,7 +3,7 @@ import AdminPage from './AdminPage'
 import ManufacturerPage from './ManufacturerPage'
 import RecyclerPage from './RecyclerPage'
 import AuthorityPage from './AuthorityPage'
-import {Routes, Route, useNavigate, Navigate, Link} from "react-router";
+import {Routes, Route, Navigate, Link} from "react-router";
 import {useEffect, useState} from "react";
 import axios from "axios";
 import type {AppUser} from "./AppUser.ts";
