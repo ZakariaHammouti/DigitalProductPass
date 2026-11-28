@@ -53,8 +53,11 @@ export default function App() {
     return (
         <>
             {appUser
-            ? <button onClick={handleLogOut}>Abmelden</button>
-            : <Link to="/login">Anmelden</Link>}
+                ? <button onClick={handleLogOut}>Abmelden</button>
+                : <> <Link to="/login">Anmelden</Link>
+                    <Link to="/">Registrieren</Link>
+                </>
+            }
 
             {logoutError && <p style={{color: 'red'}}>{logoutError}</p>}
 

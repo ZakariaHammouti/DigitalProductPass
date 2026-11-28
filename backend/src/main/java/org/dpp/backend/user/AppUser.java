@@ -10,6 +10,8 @@ public record AppUser(
         String username,
         String password,
         Role role,
-        AccountStatus accountStatus
+        AccountStatus accountStatus,
+        String email,
+        String company
 ) {
 }

@@ -7,7 +7,10 @@ import org.dpp.backend.user.Role;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -299,5 +302,141 @@ class AuthControllerTest {
         login("geheim123")
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.detail").value("Dein Konto ist gesperrt oder wurde abgelehnt"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "abc",          // fast alles fehlt
+            "geheim1!",     // kein Großbuchstabe
+            "GEHEIM1!",     // kein Kleinbuchstabe
+            "Geheimes!",    // keine Ziffer
+            "Geheim12",     // kein Sonderzeichen
+            "Ge1!",         // zu kurz
+            ""              // leer
+    })
+
+        //############ Unit Tests Post /api/auth/register
+    void register_returns400_whenPasswordIsWeak(String weakPassword) throws Exception {
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "username": "testrecycler",
+                                  "email": "test@recycling.de",
+                                  "password": "%s",
+                                  "company": "Test Recycling GmbH",
+                                  "role": "RECYCLER"
+                                }
+                                """.formatted(weakPassword)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.password").exists());
+
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void register_returns201_andSavesPendingUserWithHashedPassword() throws Exception {
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "username": "testrecycler",
+                                  "email": "test@recycling.de",
+                                  "password": "Geheim1!",
+                                  "company": "Test Recycling GmbH",
+                                  "role": "RECYCLER"
+                                }
+                                """))
+                .andExpect(status().isCreated());
+
+        ArgumentCaptor<AppUser> captor = ArgumentCaptor.forClass(AppUser.class);
+        verify(userRepository).save(captor.capture());
+        AppUser saved = captor.getValue();
+
+        assertThat(saved.username()).isEqualTo("testrecycler");
+        assertThat(saved.accountStatus()).isEqualTo(AccountStatus.PENDING);
+        assertThat(saved.role()).isEqualTo(Role.RECYCLER);
+        assertThat(saved.password()).isNotEqualTo("Geheim1!");                       // kein Klartext
+        assertThat(passwordEncoder.matches("Geheim1!", saved.password())).isTrue(); // aber der richtige Hash
+    }
+
+    @Test
+    void register_returns400_whenPasswordIsLongerThan72Bytes() throws Exception {
+        String tooLong = "Geheim1!".repeat(9) + "x";   // 73 Bytes, erfüllt sonst alle Regeln
+
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(registerJson(tooLong)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.password[0]").value("Passwort ist zu lang"));
+
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void register_returns201_whenPasswordIsExactly72Bytes() throws Exception {
+        String exactly72 = "Geheim1!".repeat(9);   // 72 Bytes, genau an der Grenze
+
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(registerJson(exactly72)))
+                .andExpect(status().isCreated());
+    }
+
+    private String registerJson(String password) {
+        return """
+                {
+                  "username": "testrecycler",
+                  "email": "test@recycling.de",
+                  "password": "%s",
+                  "company": "Test Recycling GmbH",
+                  "role": "RECYCLER"
+                }
+                """.formatted(password);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            // username,     email,              password,   company,              leeres Feld
+            "'',             test@recycling.de,  Geheim1!,   Test Recycling GmbH,  username",
+            "testrecycler,   '',                 Geheim1!,   Test Recycling GmbH,  email",
+            "testrecycler,   test@recycling.de,  '',         Test Recycling GmbH,  password",
+            "testrecycler,   test@recycling.de,  Geheim1!,   '',                   company"
+    })
+    void register_returns400_whenFieldIsBlank(String username, String email, String password,
+                                              String company, String blankField) throws Exception {
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "username": "%s",
+                                  "email": "%s",
+                                  "password": "%s",
+                                  "company": "%s",
+                                  "role": "RECYCLER"
+                                }
+                                """.formatted(username, email, password, company)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors." + blankField).exists());
+
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void register_returns400_whenRoleIsMissing() throws Exception {
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "username": "testrecycler",
+                                  "email": "test@recycling.de",
+                                  "password": "Geheim1!",
+                                  "company": "Test Recycling GmbH"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.role[0]").value("Rolle darf nicht leer sein"));
+
+        verify(userRepository, never()).save(any());
     }
 }

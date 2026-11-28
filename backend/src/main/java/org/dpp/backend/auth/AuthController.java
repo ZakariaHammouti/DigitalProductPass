@@ -4,7 +4,10 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.dpp.backend.repository.UserRepository;
+import org.dpp.backend.service.AuthService;
 import org.dpp.backend.user.AppUser;
+import org.dpp.backend.user.RegisterRequestDto;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -17,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
+    private final AuthService authService;
 
     private final AuthenticationManager authenticationManager;
     private final UserRepository userRepository;
@@ -26,9 +30,10 @@ public class AuthController {
     private final SecurityContextRepository securityContextRepository =
             new HttpSessionSecurityContextRepository();
 
-    public AuthController(AuthenticationManager authenticationManager, UserRepository userRepository) {
+    public AuthController(AuthenticationManager authenticationManager, UserRepository userRepository, AuthService authService) {
         this.authenticationManager = authenticationManager;
         this.userRepository = userRepository;
+        this.authService = authService;
     }
 
     @PostMapping("/login")
@@ -75,5 +80,11 @@ public class AuthController {
         AppUser appUser = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("Benutzer nicht gefunden: " + username));
         return new CurrentUserResponseDto(appUser.username(), appUser.role());
+    }
+
+    @PostMapping("/register")
+    @ResponseStatus(HttpStatus.CREATED)
+    public void register(@RequestBody @Valid RegisterRequestDto registerRequestDto) {
+        authService.register(registerRequestDto);
     }
 }
