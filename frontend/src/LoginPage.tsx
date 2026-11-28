@@ -51,7 +51,7 @@ export default function LoginPage({setAppUser}: LoginPageProps) {
                     Passwort
                 </label>
                 <input value={password} onChange={event => setPassword(event.target.value)} type="password"/>
-                <button>Login</button>
+                <button type="submit">Login</button>
             </form>
             <Link to="/">Zurück zur Startseite</Link>
         </>

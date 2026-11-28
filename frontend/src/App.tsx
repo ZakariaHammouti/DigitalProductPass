@@ -27,6 +27,7 @@ function startPageFor(role: string) {
 export default function App() {
 
     const [appUser, setAppUser] = useState<AppUser | null | undefined>(undefined);
+    const [logoutError, setLogoutError] = useState("")
 
     useEffect(() => {
         axios.get('/api/auth/me')
@@ -38,18 +39,24 @@ export default function App() {
     }, [])
 
     function handleLogOut() {
+        setLogoutError("")
         axios.post('/api/auth/logout')
             .then(() => {
                 setAppUser(null)
             })
+            .catch(() =>
+                setLogoutError("Abmelden fehlgeschlagen. Bitte erneut versuchen."))
     }
 
     if (appUser === undefined) return <p>Lade...</p>
 
     return (
-        <>{appUser
+        <>
+            {appUser
             ? <button onClick={handleLogOut}>Abmelden</button>
             : <Link to="/login">Anmelden</Link>}
+
+            {logoutError && <p style={{color: 'red'}}>{logoutError}</p>}
 
             <Routes>
                 <Route path="/" element={<PublicPage/>}/>
