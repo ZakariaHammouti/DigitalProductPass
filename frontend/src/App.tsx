@@ -3,9 +3,22 @@ import AdminPage from './AdminPage'
 import ManufacturerPage from './ManufacturerPage'
 import RecyclerPage from './RecyclerPage'
 import AuthorityPage from './AuthorityPage'
-import {Routes, Route} from "react-router";
+import {Routes, Route, useNavigate} from "react-router";
+import {useEffect} from "react";
+import axios from "axios";
+//import {AppUser} from "./AppUser.ts";
 
-function App() {
+export default function App() {
+
+
+    /* useEffect(() => {
+         axios.get('/api/auth/me')
+             .then(r => {
+             })
+             .catch((error) => {
+                 console.log(error.response?.status, error.response?.data)
+             })
+     }, [])*/
 
     return (
         <Routes>
@@ -16,7 +29,4 @@ function App() {
             <Route path="/authority" element={<AuthorityPage/>}/>
         </Routes>
     )
-
 }
-
-export default App

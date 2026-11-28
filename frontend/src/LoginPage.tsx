@@ -1,69 +1,47 @@
-import {useEffect, useState} from 'react'
-import {useNavigate} from "react-router";
+import {useState} from "react";
 import axios from "axios";
 
-function startPageFor(role: string) {
-    switch (role) {
-        case 'ADMIN':
-            return '/admin'
-        case 'MANUFACTURER':
-            return '/manufacturer'
-        case 'RECYCLER':
-            return '/recycler'
-        case 'AUTHORITY':
-            return '/authority'
-        default:
-            return '/'
-    }
-}
-
 export default function LoginPage() {
-    const [username, setUsername] = useState('')
-    const [password, setPassword] = useState('')
-    const [error, setError] = useState<string | null>(null)
-    const navigate = useNavigate()
-    const [loading, setLoading] = useState(true)
 
-    useEffect(() => {
-        axios.get('/api/auth/me')
-            .then(r => navigate(startPageFor(r.data.role)))
-            .catch(() => {
-            })
-            .finally(() => setLoading(false))
-    }, [navigate])
+    const [userName, setUserName] = useState<string>("")
+    const [password, setPassword] = useState<string>("")
+    const [errorMessage, setErrorMessage] = useState<string>("")
 
-    async function handleSubmit(event: React.FormEvent) {
+
+    async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault()
-        setError(null)
-
+        setErrorMessage("")
         try {
-            const response =
-                await axios.post('/api/auth/login', {username, password});
-            const currentUser = response.data
-            navigate(startPageFor(currentUser.role))
+            const response = await axios.post('/api/auth/login', {
+                username: userName,
+                password: password
+            })
         } catch (error) {
             if (axios.isAxiosError(error)) {
-                setError(error.response?.data?.detail ?? 'Anmeldung fehlgeschlagen')
+                setErrorMessage(error.response?.data?.detail ?? "Fehler beim Login");
             }
         }
     }
 
-    if (loading) return <p>Lade...</p>
-
-
     return (
-        <form onSubmit={handleSubmit}>
-            <h1>Anmelden</h1>
-            {error && <p style={{color: 'red'}}>{error}</p>}
-            <label>
-                Benutzername
-                <input value={username} onChange={e => setUsername(e.target.value)}/>
-            </label>
-            <label>
-                Passwort
-                <input type="password" value={password} onChange={e => setPassword(e.target.value)}/>
-            </label>
-            <button type="submit">Anmelden</button>
-        </form>
+        <>
+            <h1>Login Page</h1>
+
+            {errorMessage &&
+                <p style={{color: 'red'}}>{errorMessage}</p>
+            }
+
+            <form className={"add-restaurant-form"} onSubmit={handleSubmit}>
+                <label>
+                    Benutzername
+                </label>
+                <input value={userName} onChange={event => setUserName(event.target.value)}/>
+                <label>
+                    Passwort
+                </label>
+                <input value={password} onChange={event => setPassword(event.target.value)} type="password"/>
+                <button>Login</button>
+            </form>
+        </>
     )
 }
