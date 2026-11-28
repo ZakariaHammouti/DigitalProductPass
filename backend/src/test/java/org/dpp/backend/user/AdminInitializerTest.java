@@ -16,6 +16,20 @@ class AdminInitializerTest {
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     @Test
+    void run_doesNotCreateAdmin_whenPasswordIsLongerThan72Bytes() {
+        // given
+        when(userRepository.existsByRole(Role.ADMIN)).thenReturn(false);
+        AdminInitializer initializer =
+                new AdminInitializer(userRepository, passwordEncoder, "admin", "a".repeat(73));
+
+        // when
+        initializer.run(null);
+
+        // then
+        verify(userRepository, never()).save(any(AppUser.class));
+    }
+    
+    @Test
     void run_createsActiveAdminWithHashedPassword_whenNoAdminExists() {
         // given
         when(userRepository.existsByRole(Role.ADMIN)).thenReturn(false);
@@ -26,11 +40,11 @@ class AdminInitializerTest {
         initializer.run(null);
 
         // then
-        ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+        ArgumentCaptor<AppUser> captor = ArgumentCaptor.forClass(AppUser.class);
         //wurde save aufgerufen und den user gespeichert
         verify(userRepository).save(captor.capture());
         //den gespeicherten user abfragen
-        User saved = captor.getValue();
+        AppUser saved = captor.getValue();
 
         assertThat(saved.username()).isEqualTo("admin");
         assertThat(saved.role()).isEqualTo(Role.ADMIN);
@@ -53,7 +67,7 @@ class AdminInitializerTest {
         initializer.run(null);
 
         // then
-        verify(userRepository, never()).save(any(User.class));
+        verify(userRepository, never()).save(any(AppUser.class));
     }
 
     @Test
@@ -70,7 +84,7 @@ class AdminInitializerTest {
         initializer.run(null);
 
         // then
-        verify(userRepository, never()).save(any(User.class));
+        verify(userRepository, never()).save(any(AppUser.class));
     }
 
     @Test
@@ -87,6 +101,6 @@ class AdminInitializerTest {
         initializer.run(null);
 
         // then
-        verify(userRepository, never()).save(any(User.class));
+        verify(userRepository, never()).save(any(AppUser.class));
     }
 }

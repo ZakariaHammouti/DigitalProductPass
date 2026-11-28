@@ -8,6 +8,7 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 //logger
@@ -36,11 +37,18 @@ public class AdminInitializer implements ApplicationRunner {
 
         if (!adminExists) {
             if (adminUsername.isBlank() || adminPassword.isBlank()) {
-                log.warn("Admin-Benutzername oder Passwort ist nicht gesetzt. Bitte setzen Sie die Umgebungsvariablen ADMIN_USERNAME und ADMIN_PASSWORD.");
+                log.warn("Admin-Benutzername oder Passwort ist nicht gesetzt." +
+                        " Bitte setzen Sie die Umgebungsvariablen ADMIN_USERNAME und ADMIN_PASSWORD.");
                 return;
             }
-            
-            User adminUser = User.builder()
+
+            // NEU: BCrypt verarbeitet höchstens 72 Bytes
+            if (adminPassword.getBytes(StandardCharsets.UTF_8).length > 72) {
+                log.error("ADMIN_PASSWORD ist länger als 72 Bytes. Es wird kein Admin angelegt.");
+                return;
+            }
+
+            AppUser adminAppUser = AppUser.builder()
                     .id(UUID.randomUUID().toString())
                     .username(adminUsername)
                     .password(passwordEncoder.encode(adminPassword))
@@ -48,7 +56,7 @@ public class AdminInitializer implements ApplicationRunner {
                     .accountStatus(AccountStatus.ACTIVE)
                     .build();
 
-            userRepository.save(adminUser);
+            userRepository.save(adminAppUser);
             log.info("Admin-Benutzer erstellt: {}", adminUsername);
         } else {
             log.info("Admin-Benutzer existiert bereits.");
